@@ -1,0 +1,20 @@
+{
+  "name": "learncurator",
+  "version": "1.0.0",
+  "description": "LearnCurator - Find the best YouTube tutorials sorted by engagement and recency",
+  "private": true,
+  "scripts": {
+    "setup": "cd backend && npm install",
+    "start": "cd backend && npm start",
+    "dev": "cd backend && npm run dev",
+    "install:backend": "cd backend && npm install",
+    "install:all": "npm install && cd backend && npm install"
+  },
+  "keywords": ["youtube", "tutorials", "education", "search"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}

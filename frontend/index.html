@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="LearnCurator - Find the best YouTube tutorials sorted by engagement and relevance"
+    />
+    <title>LearnCurator - Find the Best YouTube Tutorials</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-content">
+          <h1 class="logo">
+            <span class="logo-icon">📚</span> LearnCurator
+          </h1>
+          <p class="tagline">Find the best YouTube tutorials sorted by engagement</p>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="main">
+        <!-- Search Section -->
+        <section class="search-section">
+          <div class="search-container">
+            <input
+              type="text"
+              id="searchInput"
+              class="search-input"
+              placeholder="e.g., 'HTML for beginners', 'React hooks tutorial'"
+              aria-label="Search for tutorials"
+            />
+            <button id="searchBtn" class="search-btn" aria-label="Search">
+              <span class="btn-text">Search</span>
+              <span class="btn-icon">🔍</span>
+            </button>
+          </div>
+          <p class="search-hint">
+            Tips: Try specific topics like "Python async programming" or "CSS Grid tutorial"
+          </p>
+        </section>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="loading-spinner hidden">
+          <div class="spinner"></div>
+          <p>Searching for tutorials...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="error-message hidden" role="alert">
+          <span class="error-icon">⚠️</span>
+          <span id="errorText"></span>
+          <button class="error-close" aria-label="Close error">&times;</button>
+        </div>
+
+        <!-- Results Section -->
+        <section id="resultsSection" class="results-section hidden">
+          <div class="results-header">
+            <h2 id="resultsTitle">Results</h2>
+            <p id="resultsInfo" class="results-info"></p>
+          </div>
+
+          <!-- No Results -->
+          <div id="noResults" class="no-results hidden">
+            <p>📭 No results found. Try a different search query.</p>
+          </div>
+
+          <!-- Video Grid -->
+          <div id="videosGrid" class="videos-grid"></div>
+        </section>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state">
+          <div class="empty-state-content">
+            <p class="empty-state-icon">🎓</p>
+            <h2>Start Learning</h2>
+            <p>Search for tutorials on any topic to get started</p>
+          </div>
+        </div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <p>
+          LearnCurator • Videos sorted by engagement (likes/views) and recency • Built with
+          <span class="heart">❤️</span>
+        </p>
+      </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+  </body>
+</html>
