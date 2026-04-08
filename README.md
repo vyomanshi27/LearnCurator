@@ -25,7 +25,7 @@ A web application that helps students find the best YouTube tutorials by sorting
 - Node.js
 - Express.js
 - YouTube Data API v3
-- Deployed on: Render or Railway
+- Deployed on: Koyeb
 
 ## 🚀 Getting Started
 
