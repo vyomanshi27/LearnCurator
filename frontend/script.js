@@ -5,7 +5,7 @@
 
 // Configuration
 const CONFIG = {
-  API_BASE_URL: 'http://localhost:5005', // Default local backend URL for development.
+  API_BASE_URL: '/.netlify/functions/search', // Default local backend URL for development.
   DEFAULT_MAX_RESULTS: 20,
 };
 
@@ -261,7 +261,7 @@ async function performSearch() {
   try {
     // Build API URL
     const apiBaseUrl = getApiBaseUrl();
-    const apiUrl = `${apiBaseUrl.replace(/\/$/, '')}/api/search?q=${encodeURIComponent(query)}&maxResults=${CONFIG.DEFAULT_MAX_RESULTS}`;
+    const apiUrl = `${apiBaseUrl}?q=${encodeURIComponent(query)}&maxResults=${CONFIG.DEFAULT_MAX_RESULTS}`;
 
     console.log('Searching backend with URL:', apiUrl);
 

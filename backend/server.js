@@ -70,4 +70,4 @@ function listenOnPort(port, triesLeft = 5) {
   });
 }
 
-listenOnPort(DEFAULT_PORT);
+//listenOnPort(DEFAULT_PORT);
