@@ -5,9 +5,11 @@
 
 // Configuration
 const CONFIG = {
-  API_BASE_URL: '/.netlify/functions/search', // Default local backend URL for development.
+  API_BASE_URL: 'https://learncurator.netlify.app/', // Will be set dynamically
   DEFAULT_MAX_RESULTS: 20,
 };
+
+let currentSearchQuery = '';
 
 // DOM Elements
 const searchInput = document.getElementById('searchInput');
@@ -164,7 +166,7 @@ function createVideoCard(video) {
     <div class="video-thumbnail">
       <img src="${video.thumbnail}" alt="${video.title}" loading="lazy" />
       <div class="score-badge">
-        <span>Score: ${(video.score * 100).toFixed(1)}</span>
+        <span>Score: ${((video.finalScore || video.score) * 100).toFixed(1)}</span>
       </div>
     </div>
     <div class="video-content">
@@ -188,11 +190,32 @@ function createVideoCard(video) {
           <span class="stat-value">${formatRelativeTime(video.publishedAt)}</span>
         </div>
       </div>
-      <a href="${video.url}" target="_blank" rel="noopener noreferrer" class="watch-link">
-        Watch on YouTube →
-      </a>
+      <div class="video-actions">
+        <div class="feedback-widget">
+          <div class="feedback-scale">
+            <button class="feedback-scale-btn" data-rating="1" title="Not helpful">😞</button>
+            <button class="feedback-scale-btn" data-rating="2" title="Just okay">😐</button>
+            <button class="feedback-scale-btn" data-rating="3" title="Very helpful!">😍</button>
+          </div>
+          <span class="feedback-status hidden" aria-live="polite"></span>
+        </div>
+        <a href="${video.url}" target="_blank" rel="noopener noreferrer" class="watch-link">
+          Watch on YouTube →
+        </a>
+      </div>
     </div>
   `;
+
+  const ratingButtons = card.querySelectorAll('.feedback-scale-btn');
+  const statusEl = card.querySelector('.feedback-status');
+
+  ratingButtons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      const ratingValue = parseInt(button.getAttribute('data-rating'), 10);
+      await submitVideoFeedback(video.videoId, ratingValue, ratingButtons, statusEl);
+    });
+  });
+
   return card;
 }
 
@@ -250,6 +273,8 @@ async function performSearch() {
     return;
   }
 
+  currentSearchQuery = query;
+
   // Disable search button and show loading
   searchBtn.disabled = true;
   hideError();
@@ -261,7 +286,7 @@ async function performSearch() {
   try {
     // Build API URL
     const apiBaseUrl = getApiBaseUrl();
-    const apiUrl = `${apiBaseUrl}?q=${encodeURIComponent(query)}&maxResults=${CONFIG.DEFAULT_MAX_RESULTS}`;
+    const apiUrl = `${apiBaseUrl}/api/search?q=${encodeURIComponent(query)}&maxResults=${CONFIG.DEFAULT_MAX_RESULTS}`;
 
     console.log('Searching backend with URL:', apiUrl);
 
@@ -323,21 +348,73 @@ async function performSearch() {
   }
 }
 
+function displayFeedbackStatus(statusEl, message) {
+  if (!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.classList.remove('hidden');
+  setTimeout(() => {
+    statusEl.textContent = '';
+    statusEl.classList.add('hidden');
+  }, 3000);
+}
+
+async function submitVideoFeedback(videoId, ratingValue, buttons, statusEl) {
+  try {
+    buttons.forEach((btn) => {
+      btn.disabled = true;
+    });
+
+    const commentInput = prompt('Thanks for rating! Any additional feedback for this video? (Optional)');
+    const comment = commentInput && commentInput.trim().length > 0 ? commentInput.trim() : null;
+
+    const apiBaseUrl = getApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/api/feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        videoId,
+        ratingValue,
+        comment,
+        searchQuery: currentSearchQuery || null,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorBody}`);
+    }
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Unknown error');
+    }
+
+    displayFeedbackStatus(statusEl, '✓ Thanks!');
+  } catch (error) {
+    console.error('Failed to submit feedback:', error);
+    alert(`Failed to submit feedback: ${error.message}`);
+
+    buttons.forEach((btn) => {
+      btn.disabled = false;
+    });
+  }
+}
+
 function getApiBaseUrl() {
-  if (CONFIG.API_BASE_URL && CONFIG.API_BASE_URL !== 'https://your-backend-url.com') {
+  if (CONFIG.API_BASE_URL) {
     return CONFIG.API_BASE_URL;
   }
 
-  if (window.location.protocol === 'file:') {
-    return 'http://localhost:5000';
-  }
-
-  return window.location.origin;
+  // For local development, use localhost:3001
+  return 'http://localhost:3001';
 }
 
 function loadConfiguration() {
-  if (!CONFIG.API_BASE_URL || CONFIG.API_BASE_URL === 'https://your-backend-url.com') {
-    CONFIG.API_BASE_URL = getApiBaseUrl();
+  // Set API base URL for local development
+  if (!CONFIG.API_BASE_URL) {
+    CONFIG.API_BASE_URL = 'http://localhost:3001';
   }
 
   if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {

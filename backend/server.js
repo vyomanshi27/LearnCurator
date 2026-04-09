@@ -7,6 +7,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const searchRoutes = require('./routes/search');
+const feedbackRoutes = require('./routes/feedback');
 const errorHandler = require('./middleware/errorHandler');
 
 // Initialize the app
@@ -30,6 +31,7 @@ app.use(cors(corsOptions));
 
 // Routes
 app.use('/api', searchRoutes);
+app.use('/api', feedbackRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -43,6 +45,8 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       search: 'GET /api/search?q=query',
+      feedback: 'POST /api/feedback',
+      feedbackStats: 'GET /api/feedback/stats',
       health: 'GET /health',
     },
   });

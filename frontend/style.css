@@ -479,6 +479,56 @@ body {
   transform: translateX(2px);
 }
 
+.video-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+
+.feedback-widget {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: 0.5rem;
+}
+
+.feedback-scale {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.feedback-scale-btn {
+  background: none;
+  border: none;
+  padding: 0.35rem;
+  cursor: pointer;
+  font-size: 1.45rem;
+  transition: var(--transition-base);
+  border-radius: 0.5rem;
+}
+
+.feedback-scale-btn:hover {
+  transform: translateY(-1px);
+}
+
+.feedback-scale-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.feedback-status {
+  color: var(--success-color);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.feedback-status.hidden {
+  display: none;
+}
+
 /* ===========================
    Empty State
    =========================== */
