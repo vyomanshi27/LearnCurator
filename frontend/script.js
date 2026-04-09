@@ -407,14 +407,22 @@ function getApiBaseUrl() {
     return CONFIG.API_BASE_URL;
   }
 
-  // For local development, use localhost:3001
-  return 'http://localhost:3001';
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `http://${hostname}:3001`;
+  }
+
+  if (hostname === '::1') {
+    return 'http://[::1]:3001';
+  }
+
+  return `http://${hostname}:3001`;
 }
 
 function loadConfiguration() {
   // Set API base URL for local development
   if (!CONFIG.API_BASE_URL) {
-    CONFIG.API_BASE_URL = 'http://localhost:3001';
+    CONFIG.API_BASE_URL = getApiBaseUrl();
   }
 
   if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {

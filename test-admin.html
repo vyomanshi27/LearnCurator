@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Admin Login</title>
+</head>
+<body>
+    <h1>Test Admin Login</h1>
+    <input id="password" type="password" placeholder="Enter password">
+    <button onclick="testLogin()">Test Login</button>
+    <div id="result"></div>
+
+    <script>
+        async function testLogin() {
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+
+            try {
+                console.log('Testing login with password:', password);
+                const response = await fetch('http://localhost:3001/api/admin/login', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password })
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                resultDiv.innerHTML = `<pre>Status: ${response.status}\nData: ${JSON.stringify(data, null, 2)}</pre>`;
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<pre>Error: ${error.message}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

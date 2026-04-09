@@ -23,7 +23,30 @@ app.use(express.json());
 
 // CORS Configuration
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || '*',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      'http://127.0.0.1:5500',
+      'http://localhost:5500',
+      'http://127.0.0.1:5501',
+      'http://localhost:5501',
+      'http://127.0.0.1:3000',
+      'http://localhost:3000'
+    ];
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // In development, allow all origins
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  },
   optionsSuccessStatus: 200,
   credentials: true,
 };

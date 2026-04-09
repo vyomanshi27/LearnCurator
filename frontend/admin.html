@@ -250,7 +250,7 @@
 
     <script>
         const CONFIG = {
-            API_BASE_URL: '/.netlify/functions/search'
+            // API_BASE_URL will be set dynamically for local development
         };
 
         const loginContainer = document.getElementById('loginContainer');
@@ -269,11 +269,45 @@
             logoutBtn.addEventListener('click', handleLogout);
         });
 
+        function getApiBaseUrl() {
+            if (CONFIG.API_BASE_URL) {
+                return CONFIG.API_BASE_URL;
+            }
+
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return `http://${hostname}:3001`;
+            }
+
+            if (hostname === '::1') {
+                return 'http://[::1]:3001';
+            }
+
+            return `http://${hostname}:3001`;
+        }
+
+        function loadConfiguration() {
+            // Set API base URL for local development
+            if (!CONFIG.API_BASE_URL) {
+                CONFIG.API_BASE_URL = getApiBaseUrl();
+            }
+
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                console.log('Running in production mode');
+            }
+        }
+
+        // Initialize configuration on page load
+        window.addEventListener('load', loadConfiguration);
+
         async function handleLogin() {
+            console.log('handleLogin called');
             loginError.classList.add('hidden');
             loginError.textContent = '';
 
             const password = adminPasswordInput.value.trim();
+            console.log('Password entered, length:', password.length);
+
             if (!password) {
                 showLoginError('Please enter your admin password.');
                 return;
@@ -283,7 +317,10 @@
             loginBtn.textContent = '🔐 Logging in...';
 
             try {
-                const response = await fetch(`${CONFIG.API_BASE_URL}/api/admin/login`, {
+                const apiUrl = `${getApiBaseUrl()}/api/admin/login`;
+                console.log('Making request to:', apiUrl);
+
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     credentials: 'include',
                     headers: {
@@ -292,7 +329,11 @@
                     body: JSON.stringify({ password })
                 });
 
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+
                 const data = await response.json();
+                console.log('Response data:', data);
 
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || 'Login failed');
@@ -314,7 +355,7 @@
             logoutBtn.textContent = '🚪 Logging out...';
 
             try {
-                await fetch(`${CONFIG.API_BASE_URL}/api/admin/logout`, {
+                await fetch(`${getApiBaseUrl()}/api/admin/logout`, {
                     method: 'POST',
                     credentials: 'include'
                 });
@@ -347,7 +388,7 @@
             refreshBtn.textContent = '⏳ Loading...';
 
             try {
-                const response = await fetch(`${CONFIG.API_BASE_URL}/api/admin/feedback-stats`, {
+                const response = await fetch(`${getApiBaseUrl()}/api/admin/feedback-stats`, {
                     credentials: 'include'
                 });
 
