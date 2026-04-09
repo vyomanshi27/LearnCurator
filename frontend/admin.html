@@ -151,6 +151,54 @@
             color: #666;
         }
 
+        .login-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 480px;
+            margin: 0 auto 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            text-align: center;
+        }
+
+        .login-panel h2 {
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .login-panel p {
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        .login-panel input {
+            width: 100%;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+            border: 1px solid #d7dfe9;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .refresh-btn.logout {
+            background: #dc3545;
+        }
+
+        .refresh-btn.logout:hover {
+            background: #c82333;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -178,62 +226,147 @@
     <div class="container">
         <div class="header">
             <h1>📊 LearnCurator Admin Dashboard</h1>
-            <p>View and manage user feedback statistics</p>
+            <p>Owner access for feedback monitoring</p>
         </div>
 
-        <button id="refreshBtn" class="refresh-btn">🔄 Refresh Data</button>
-
-        <div id="statsContainer" class="stats-grid">
-            <!-- Stats will be populated here -->
+        <div id="loginContainer" class="login-panel">
+            <h2>Admin login</h2>
+            <p>Enter your password to access the dashboard.</p>
+            <input id="adminPasswordInput" type="password" placeholder="Admin password" />
+            <button id="loginBtn" class="refresh-btn">🔐 Login</button>
+            <div id="loginError" class="error hidden"></div>
         </div>
 
-        <div id="tableContainer" class="table-container">
-            <!-- Table will be populated here -->
+        <div id="dashboard" class="hidden">
+            <div class="button-row">
+                <button id="refreshBtn" class="refresh-btn">🔄 Refresh Data</button>
+                <button id="logoutBtn" class="refresh-btn logout">🚪 Logout</button>
+            </div>
+
+            <div id="statsContainer" class="stats-grid"></div>
+            <div id="tableContainer" class="table-container"></div>
         </div>
     </div>
 
     <script>
-        // Configuration
         const CONFIG = {
-            API_BASE_URL: 'http://localhost:3001', // Update this to your production backend URL
-            FEEDBACK_STATS_TOKEN: 'RfOyJbqyvVcA6xWF' // This token is protected by Netlify password protection
+            API_BASE_URL: '/.netlify/functions/search'
         };
 
-        // DOM Elements
+        const loginContainer = document.getElementById('loginContainer');
+        const dashboard = document.getElementById('dashboard');
+        const adminPasswordInput = document.getElementById('adminPasswordInput');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginError = document.getElementById('loginError');
         const refreshBtn = document.getElementById('refreshBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
         const statsContainer = document.getElementById('statsContainer');
         const tableContainer = document.getElementById('tableContainer');
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', loadFeedbackData);
-        refreshBtn.addEventListener('click', loadFeedbackData);
+        document.addEventListener('DOMContentLoaded', () => {
+            loginBtn.addEventListener('click', handleLogin);
+            refreshBtn.addEventListener('click', loadFeedbackData);
+            logoutBtn.addEventListener('click', handleLogout);
+        });
+
+        async function handleLogin() {
+            loginError.classList.add('hidden');
+            loginError.textContent = '';
+
+            const password = adminPasswordInput.value.trim();
+            if (!password) {
+                showLoginError('Please enter your admin password.');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '🔐 Logging in...';
+
+            try {
+                const response = await fetch(`${CONFIG.API_BASE_URL}/api/admin/login`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Login failed');
+                }
+
+                adminPasswordInput.value = '';
+                showDashboard();
+                loadFeedbackData();
+            } catch (error) {
+                showLoginError(error.message || 'Unable to login');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '🔐 Login';
+            }
+        }
+
+        async function handleLogout() {
+            logoutBtn.disabled = true;
+            logoutBtn.textContent = '🚪 Logging out...';
+
+            try {
+                await fetch(`${CONFIG.API_BASE_URL}/api/admin/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (error) {
+                console.warn('Logout error', error);
+            }
+
+            hideDashboard();
+        }
+
+        function showLoginError(message) {
+            loginError.textContent = message;
+            loginError.classList.remove('hidden');
+        }
+
+        function showDashboard() {
+            loginContainer.classList.add('hidden');
+            dashboard.classList.remove('hidden');
+        }
+
+        function hideDashboard() {
+            loginContainer.classList.remove('hidden');
+            dashboard.classList.add('hidden');
+            statsContainer.innerHTML = '';
+            tableContainer.innerHTML = '';
+        }
 
         async function loadFeedbackData() {
             refreshBtn.disabled = true;
             refreshBtn.textContent = '⏳ Loading...';
 
             try {
-                const response = await fetch(`${CONFIG.API_BASE_URL}/api/feedback/stats`, {
-                    headers: {
-                        'x-admin-token': CONFIG.FEEDBACK_STATS_TOKEN
-                    }
+                const response = await fetch(`${CONFIG.API_BASE_URL}/api/admin/feedback-stats`, {
+                    credentials: 'include'
                 });
 
                 if (!response.ok) {
+                    if (response.status === 401) {
+                        hideDashboard();
+                        throw new Error('Unauthorized. Please log in again.');
+                    }
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 const data = await response.json();
-
                 if (!data.success) {
                     throw new Error(data.error || 'Unknown error');
                 }
 
                 renderStats(data);
                 renderTable(data.recentFeedback || []);
-
             } catch (error) {
-                console.error('Failed to load feedback data:', error);
                 showError(`Failed to load data: ${error.message}`);
             } finally {
                 refreshBtn.disabled = false;
