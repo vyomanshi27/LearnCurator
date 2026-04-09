@@ -25,7 +25,7 @@ A web application that helps students find the best YouTube tutorials by sorting
 - Node.js
 - Express.js
 - YouTube Data API v3
-- Deployed on: Koyeb
+- Deployed on: Netlify
 
 ## 🚀 Getting Started
 
@@ -207,68 +207,7 @@ GET /api/search?q=query&maxResults=20
 - Use `.env` file and add to `.gitignore`
 - Consider setting API usage quotas in Google Cloud Console
 
-## 📦 Deployment
 
-### Frontend (Netlify)
-
-1. **Push your frontend code to GitHub**
-   ```bash
-   cd frontend
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git push origin main
-   ```
-
-2. **Connect to Netlify**
-   - Go to https://netlify.com/
-   - Click "New site from Git"
-   - Select your GitHub repository
-   - Build command: (leave empty for static site)
-   - Publish directory: `frontend` or `.`
-
-3. **Update API URL**
-   - In [frontend/script.js](frontend/script.js), update `API_BASE_URL` to your deployed backend URL
-
-4. **Redeploy** to apply changes
-
-### Backend (Render)
-
-1. **Push your backend code to GitHub**
-   ```bash
-   cd backend
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git push origin main
-   ```
-
-2. **Connect to Render**
-   - Go to https://render.com/
-   - Click "New +" → "Web Service"
-   - Select your GitHub repository
-   - Build command: `npm install`
-   - Start command: `npm start`
-   - Add environment variables from `.env`
-
-3. **Note the deployed URL** (e.g., `https://learncurator-api.onrender.com`)
-
-4. **Update frontend API URL** with the deployed backend URL
-
-### Backend (Railway)
-
-1. **Deploy with Railway CLI**
-   ```bash
-   npm install -g @railway/cli
-   railway login
-   cd backend
-   railway init
-   railway up
-   ```
-
-2. **Add environment variables** in Railway dashboard
-
-3. **Get the URL** from Railway dashboard and update frontend
 
 ## 🛠️ Project Structure
 
