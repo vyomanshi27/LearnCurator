@@ -9,6 +9,10 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const sentiment = new Sentiment();
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
+const SUPPORTED_LANGUAGES = ['en', 'hi'];
+const HINDI_REGEX = /[\u0900-\u097F]/;
+const TELUGU_REGEX = /[\u0C00-\u0C63]/;
+const MALAYALAM_REGEX = /[\u0D00-\u0D63]/;
 
 // Initialize Gemini AI (if API key is available)
 let genAI = null;
@@ -120,6 +124,48 @@ function formatVideoData(item, videoDetails) {
   video.score = calculateScore(video);
 
   return video;
+}
+
+function detectVideoLanguage(videoDetails, title, description) {
+  const snippet = videoDetails.snippet || {};
+  const rawLang = (snippet.defaultAudioLanguage || snippet.defaultLanguage || '').toLowerCase();
+  const fullText = `${title || ''} ${description || ''} ${snippet.channelTitle || ''}`.toLowerCase();
+
+  // Reject based on language keywords in text
+  const rejectKeywords = ['telugu', 'tamil', 'malayalam', 'kannada', 'telugulo', 'తెలుగు'];
+  if (rejectKeywords.some(keyword => fullText.includes(keyword))) {
+    return null;
+  }
+
+  // Check for Hindi
+  if (rawLang.startsWith('hi') || rawLang === 'hi_IN') return 'hi';
+  
+  // Check for English
+  if (rawLang.startsWith('en') || rawLang === 'en_US' || rawLang === 'en_GB') return 'en';
+
+  // Reject Telugu
+  if (rawLang.startsWith('te')) return null;
+  
+  // Reject Malayalam
+  if (rawLang.startsWith('ml')) return null;
+
+  // Reject Tamil
+  if (rawLang.startsWith('ta')) return null;
+
+  // Reject Kannada
+  if (rawLang.startsWith('kn')) return null;
+
+  const text = `${title || ''} ${description || ''}`;
+  
+  // Reject based on script detection
+  if (TELUGU_REGEX.test(text)) return null;
+  if (MALAYALAM_REGEX.test(text)) return null;
+  
+  if (HINDI_REGEX.test(text)) {
+    return 'hi';
+  }
+
+  return 'en';
 }
 
 /**
@@ -300,9 +346,10 @@ async function fetchVideoStatistics(videoIds, apiKey) {
  * Searches YouTube for videos matching a query
  * @param {string} query - Search query
  * @param {number} maxResults - Maximum number of results (default: 20)
+ * @param {object} options - Additional options
  * @returns {Promise<Array>} Array of formatted video objects sorted by score
  */
-async function searchVideos(query, maxResults = 20) {
+async function searchVideos(query, maxResults = 20, options = {}) {
   const apiKey = process.env.YOUTUBE_API_KEY;
 
   if (!apiKey) {
@@ -315,15 +362,18 @@ async function searchVideos(query, maxResults = 20) {
 
   try {
     // Step 1: Search for videos
+    const searchParams = {
+      part: 'snippet',
+      q: query,
+      type: 'video',
+      order: 'relevance',
+      maxResults: Math.min(maxResults * 2, 50), // Fetch more to account for filtering shorts
+      key: apiKey,
+    };
+
+
     const searchResponse = await axios.get(`${YOUTUBE_API_BASE}/search`, {
-      params: {
-        part: 'snippet',
-        q: query,
-        type: 'video',
-        order: 'relevance',
-        maxResults: Math.min(maxResults * 2, 50), // Fetch more to account for filtering shorts
-        key: apiKey,
-      },
+      params: searchParams,
     });
 
     if (!searchResponse.data.items || searchResponse.data.items.length === 0) {
@@ -345,6 +395,17 @@ async function searchVideos(query, maxResults = 20) {
         return null;
       })
       .filter((video) => video !== null && !isShort(video.duration));
+
+    // Step 3.5: Keep only English/Hindi videos
+    videos = videos.filter((video) => {
+      const detectedLang = detectVideoLanguage(
+        videoDetails[video.videoId],
+        video.title,
+        video.description
+      );
+      video.detectedLanguage = detectedLang;
+      return detectedLang !== null && SUPPORTED_LANGUAGES.includes(detectedLang);
+    });
 
     // Step 4: Sort by initial score and take top N for sentiment analysis
     videos.sort((a, b) => b.score - a.score);

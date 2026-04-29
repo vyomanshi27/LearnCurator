@@ -135,20 +135,95 @@ body {
 }
 
 .search-container {
-  display: flex;
+  width: 100%;
+  max-width: 2000px;
+  margin: 0 auto 1rem;
+}
+
+.search-panel {
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 1rem;
-  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.search-input-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+  width: 100%;
 }
 
 .search-input {
   flex: 1;
-  padding: 1rem;
+  padding: 1rem 1.1rem;
   font-size: 1rem;
   border: 2px solid var(--border-color);
   border-radius: 0.75rem;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: var(--transition-base);
+  min-width: 0;
+}
+
+.search-input:hover {
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.search-info-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 1rem;
+  background-color: rgba(99, 102, 241, 0.06);
+}
+
+.search-description {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.search-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.search-btn {
+  padding: 1rem 1.6rem;
+  min-width: 160px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: var(--transition-base);
+  white-space: nowrap;
+}
+
+.search-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(79, 70, 229, 0.2);
+}
+
+.search-btn:disabled {
+  background-color: var(--border-color);
+  cursor: not-allowed;
+  transform: none;
 }
 
 .search-input:hover {
@@ -640,6 +715,11 @@ body {
 
   .search-input {
     font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .search-btn {
+    padding: 0.875rem 1.5rem;
+    font-size: 0.9rem;
   }
 
   .results-header h2 {

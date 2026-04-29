@@ -286,9 +286,13 @@ async function performSearch() {
   try {
     // Build API URL
     const apiBaseUrl = getApiBaseUrl();
-    const apiUrl = `${apiBaseUrl}/api/search?q=${encodeURIComponent(query)}&maxResults=${CONFIG.DEFAULT_MAX_RESULTS}`;
+    const params = new URLSearchParams({
+      q: query,
+      maxResults: CONFIG.DEFAULT_MAX_RESULTS,
+    });
+    const apiUrl = `${apiBaseUrl}/api/search?${params}`;
 
-    console.log('Searching backend with URL:', apiUrl);
+    console.log('Searching with URL:', apiUrl);
 
     // Fetch from API
     const response = await fetch(apiUrl);
@@ -419,18 +423,8 @@ function getApiBaseUrl() {
   return `http://${hostname}:3001`;
 }
 
-function loadConfiguration() {
-  // Set API base URL for local development
-  if (!CONFIG.API_BASE_URL) {
-    CONFIG.API_BASE_URL = getApiBaseUrl();
-  }
-
-  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    console.log('Running in production mode');
-  }
-}
-
+/**
+ * Initialize language selector with supported languages
+ */
 // Initialize configuration on page load
-window.addEventListener('load', loadConfiguration);
-
 console.log('✓ LearnCurator Frontend initialized');
