@@ -13,6 +13,7 @@ const SUPPORTED_LANGUAGES = ['en', 'hi'];
 const HINDI_REGEX = /[\u0900-\u097F]/;
 const TELUGU_REGEX = /[\u0C00-\u0C63]/;
 const MALAYALAM_REGEX = /[\u0D00-\u0D63]/;
+const TAMIL_REGEX = /[\u0B80-\u0BFF]/;
 
 // Initialize Gemini AI (if API key is available)
 let genAI = null;
@@ -31,15 +32,12 @@ if (process.env.GEMINI_API_KEY) {
 function getRecencyFactor(publishedAt) {
   const publishDate = new Date(publishedAt);
   const now = new Date();
-  const daysSincePublished = Math.floor((now - publishDate) / (1000 * 60 * 60 * 24));
+  const yearsSince = (now - publishDate) / (1000 * 60 * 60 * 24 * 365);
 
-  if (daysSincePublished <= 30) {
-    return 1.0;
-  } else if (daysSincePublished <= 90) {
-    return 0.5;
-  } else {
-    return 0.2;
-  }
+  if (yearsSince <= 1) return 1.0;
+  if (yearsSince <= 2) return 0.9;
+  if (yearsSince <= 4) return 0.7;
+  return 0.5;
 }
 
 /**
@@ -54,6 +52,28 @@ function getEngagementRatio(likes, views) {
     return 0;
   }
   return Math.min(likes / views, 1); // Cap at 1.0
+}
+
+/**
+ * Computes a view-count boost for popular videos.
+ * - 1.0 for 1M+ views, 0.5 for 500K, etc.
+ * - If older than 2 years, the boost is halved.
+ * @param {number} viewCount - Total view count
+ * @param {string} publishedAt - ISO 8601 formatted publish date
+ * @returns {number} Boost factor (0 to 1)
+ */
+function getViewBoost(viewCount, publishedAt) {
+  const viewsInMillions = (viewCount || 0) / 1_000_000;
+  let boost = Math.min(1.0, viewsInMillions);
+  const publishDate = new Date(publishedAt);
+  const now = new Date();
+  const yearsSincePublished = (now - publishDate) / (1000 * 60 * 60 * 24 * 365);
+
+  if (yearsSincePublished > 2) {
+    boost *= 0.5;
+  }
+
+  return parseFloat(boost.toFixed(4));
 }
 
 /**
@@ -74,23 +94,42 @@ function calculateScore(video) {
 }
 
 /**
- * Checks if a video is a YouTube Short based on duration
- * @param {string} duration - ISO 8601 duration string (e.g., PT1M, PT45S)
- * @returns {boolean} True if duration <= 60 seconds
+ * Converts ISO 8601 duration string to total seconds
+ * @param {string} duration - ISO 8601 duration string (e.g., PT1H2M30S)
+ * @returns {number} Total duration in seconds
  */
-function isShort(duration) {
-  if (!duration) return false;
+function getDurationInSeconds(duration) {
+  if (!duration) return 0;
 
-  // Parse ISO 8601 duration (PT1M30S = 1 minute 30 seconds)
+  // Parse ISO 8601 duration (PT1H2M30S = 1 hour 2 minutes 30 seconds)
   const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-  if (!match) return false;
+  if (!match) return 0;
 
   const hours = parseInt(match[1] || 0);
   const minutes = parseInt(match[2] || 0);
   const seconds = parseInt(match[3] || 0);
 
-  const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+/**
+ * Checks if a video is a YouTube Short based on duration
+ * @param {string} duration - ISO 8601 duration string (e.g., PT1M, PT45S)
+ * @returns {boolean} True if duration <= 60 seconds
+ */
+function isShort(duration) {
+  const totalSeconds = getDurationInSeconds(duration);
   return totalSeconds <= 60;
+}
+
+/**
+ * Checks if video meets minimum duration requirement (5 minutes)
+ * @param {string} duration - ISO 8601 duration string
+ * @returns {boolean} True if duration >= 300 seconds (5 minutes)
+ */
+function meetsMinimumDuration(duration) {
+  const totalSeconds = getDurationInSeconds(duration);
+  return totalSeconds >= 300;
 }
 
 /**
@@ -126,47 +165,59 @@ function formatVideoData(item, videoDetails) {
   return video;
 }
 
-function detectVideoLanguage(videoDetails, title, description) {
+
+ function detectVideoLanguage(videoDetails, title, description) {
   const snippet = videoDetails.snippet || {};
   const rawLang = (snippet.defaultAudioLanguage || snippet.defaultLanguage || '').toLowerCase();
+  
+  // Combine all text (title, description, channel name) for keyword detection
   const fullText = `${title || ''} ${description || ''} ${snippet.channelTitle || ''}`.toLowerCase();
-
-  // Reject based on language keywords in text
+  
+  // 1. FIRST: Reject based on strong language keywords (case‑insensitive)
   const rejectKeywords = ['telugu', 'tamil', 'malayalam', 'kannada', 'telugulo', 'తెలుగు'];
-  if (rejectKeywords.some(keyword => fullText.includes(keyword))) {
+  for (const kw of rejectKeywords) {
+    if (fullText.includes(kw)) {
+      console.log(`❌ Rejected video due to keyword: ${kw}`);
+      return null;
+    }
+  }
+  
+  // 2. Reject based on YouTube's audio language code
+  if (rawLang) {
+    const langCode = rawLang.split('-')[0];
+    if (['te', 'ta', 'ml', 'kn'].includes(langCode)) {
+      console.log(`❌ Rejected video due to audio language: ${rawLang}`);
+      return null;
+    }
+    if (langCode === 'hi') return 'hi';
+    if (langCode === 'en') return 'en';
+    // If audio language is something else but not empty, reject
+    if (langCode !== '') return null;
+  }
+  
+  // 3. Reject based on script detection for non-English/Hindi languages
+  if (TELUGU_REGEX.test(fullText)) {
+    console.log(`❌ Rejected video due to Telugu script detected`);
     return null;
   }
-
-  // Check for Hindi
-  if (rawLang.startsWith('hi') || rawLang === 'hi_IN') return 'hi';
+  if (MALAYALAM_REGEX.test(fullText)) {
+    console.log(`❌ Rejected video due to Malayalam script detected`);
+    return null;
+  }
+  if (TAMIL_REGEX.test(fullText)) {
+    console.log(`❌ Rejected video due to Tamil script detected`);
+    return null;
+  }
   
-  // Check for English
-  if (rawLang.startsWith('en') || rawLang === 'en_US' || rawLang === 'en_GB') return 'en';
-
-  // Reject Telugu
-  if (rawLang.startsWith('te')) return null;
-  
-  // Reject Malayalam
-  if (rawLang.startsWith('ml')) return null;
-
-  // Reject Tamil
-  if (rawLang.startsWith('ta')) return null;
-
-  // Reject Kannada
-  if (rawLang.startsWith('kn')) return null;
-
-  const text = `${title || ''} ${description || ''}`;
-  
-  // Reject based on script detection
-  if (TELUGU_REGEX.test(text)) return null;
-  if (MALAYALAM_REGEX.test(text)) return null;
-  
-  if (HINDI_REGEX.test(text)) {
+  // 4. Check for Hindi script
+  if (HINDI_REGEX.test(fullText)) {
     return 'hi';
   }
-
+  
+  // 5. Default to English
   return 'en';
-}
+} 
+  
 
 /**
  * Fetches comments for a video using YouTube API
@@ -309,8 +360,9 @@ function calculateFinalScore(video) {
   const engagementRatio = video.engagementRatio;
   const recencyFactor = getRecencyFactor(video.publishedAt);
   const sentimentScore = video.sentimentScore || 0.5; // Default to neutral
+  const viewBoost = getViewBoost(video.viewCount || 0, video.publishedAt);
 
-  const finalScore = engagementRatio * 0.4 + recencyFactor * 0.2 + sentimentScore * 0.4;
+  const finalScore = engagementRatio * 0.3 + recencyFactor * 0.1 + sentimentScore * 0.3 + viewBoost * 0.3;
   return parseFloat(finalScore.toFixed(4));
 }
 
@@ -386,7 +438,7 @@ async function searchVideos(query, maxResults = 20, options = {}) {
     // Step 2: Fetch detailed statistics for all videos
     const videoDetails = await fetchVideoStatistics(videoIds, apiKey);
 
-    // Step 3: Format videos and filter out shorts
+    // Step 3: Format videos and filter out shorts and videos shorter than 5 minutes
     let videos = searchResponse.data.items
       .map((item) => {
         if (videoDetails[item.id.videoId]) {
@@ -394,8 +446,19 @@ async function searchVideos(query, maxResults = 20, options = {}) {
         }
         return null;
       })
-      .filter((video) => video !== null && !isShort(video.duration));
+      .filter((video) => video !== null && !isShort(video.duration) && meetsMinimumDuration(video.duration));
 
+      // 🚫 Explicitly block channels with unwanted language keywords
+      const blockedChannelKeywords = ['telugu', 'tamil', 'malayalam', 'kannada'];
+      videos = videos.filter(video => {
+      const channelLower = (video.channelTitle || '').toLowerCase();
+      const isBlocked = blockedChannelKeywords.some(keyword => channelLower.includes(keyword));
+      if (isBlocked) {
+      console.log(`🚫 Blocked video from channel: ${video.channelTitle}`);
+      return false;
+      }
+      return true;
+      });
     // Step 3.5: Keep only English/Hindi videos
     videos = videos.filter((video) => {
       const detectedLang = detectVideoLanguage(

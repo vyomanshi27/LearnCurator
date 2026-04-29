@@ -8,6 +8,8 @@ const SUPPORTED_LANGUAGES = ['en', 'hi'];
 const PREFERRED_CAPTION_LANGUAGES = ['en', 'en-US', 'hi', 'hi-IN'];
 const TELUGU_REGEX = /[\u0C00-\u0C63]/;
 const MALAYALAM_REGEX = /[\u0D00-\u0D63]/;
+const TAMIL_REGEX = /[\u0B80-\u0BFF]/;
+const HINDI_REGEX = /[\u0900-\u097F]/;
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -38,11 +40,73 @@ function getEngagementRatio(likes, views) {
 function getRecencyFactor(publishedAt) {
   const publishDate = new Date(publishedAt);
   const now = new Date();
-  const daysSincePublished = Math.floor((now - publishDate) / (1000 * 60 * 60 * 24));
+  const yearsSince = (now - publishDate) / (1000 * 60 * 60 * 24 * 365);
 
-  if (daysSincePublished <= 30) return 1.0;
-  if (daysSincePublished <= 90) return 0.5;
-  return 0.2;
+  if (yearsSince <= 1) return 1.0;
+  if (yearsSince <= 2) return 0.9;
+  if (yearsSince <= 4) return 0.7;
+  return 0.5;
+}
+
+/**
+ * Computes a view-count boost for popular videos.
+ * - 1.0 for 1M+ views, 0.5 for 500K, etc.
+ * - If older than 2 years, the boost is halved.
+ * @param {number} viewCount - Total views for the video
+ * @param {string} publishedAt - ISO 8601 publish date
+ * @returns {number} Boost factor (0 to 1)
+ */
+function getViewBoost(viewCount, publishedAt) {
+  const viewsInMillions = (viewCount || 0) / 1_000_000;
+  let boost = Math.min(1.0, viewsInMillions);
+  const publishDate = new Date(publishedAt);
+  const now = new Date();
+  const yearsSincePublished = (now - publishDate) / (1000 * 60 * 60 * 24 * 365);
+
+  if (yearsSincePublished > 2) {
+    boost *= 0.5;
+  }
+
+  return parseFloat(boost.toFixed(4));
+}
+
+/**
+ * Converts ISO 8601 duration string to total seconds
+ * @param {string} duration - ISO 8601 duration string (e.g., PT1H2M30S)
+ * @returns {number} Total duration in seconds
+ */
+function getDurationInSeconds(duration) {
+  if (!duration) return 0;
+
+  // Parse ISO 8601 duration (PT1H2M30S = 1 hour 2 minutes 30 seconds)
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+
+  const hours = parseInt(match[1] || 0);
+  const minutes = parseInt(match[2] || 0);
+  const seconds = parseInt(match[3] || 0);
+
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+/**
+ * Checks if a video is a YouTube Short based on duration
+ * @param {string} duration - ISO 8601 duration string (e.g., PT1M, PT45S)
+ * @returns {boolean} True if duration <= 60 seconds
+ */
+function isShort(duration) {
+  const totalSeconds = getDurationInSeconds(duration);
+  return totalSeconds <= 60;
+}
+
+/**
+ * Checks if video meets minimum duration requirement (5 minutes)
+ * @param {string} duration - ISO 8601 duration string
+ * @returns {boolean} True if duration >= 300 seconds (5 minutes)
+ */
+function meetsMinimumDuration(duration) {
+  const totalSeconds = getDurationInSeconds(duration);
+  return totalSeconds >= 300;
 }
 
 /**
@@ -55,6 +119,17 @@ function passesQualityFilter(video, publishedAt) {
   const now = new Date();
   const daysSincePublished = Math.floor((now - publishDate) / (1000 * 60 * 60 * 24));
   const engagementRatio = getEngagementRatio(likeCount, viewCount);
+  const duration = video.contentDetails?.duration;
+
+  // Exclude YouTube Shorts
+  if (isShort(duration)) {
+    return false;
+  }
+
+  // Exclude videos shorter than 5 minutes
+  if (!meetsMinimumDuration(duration)) {
+    return false;
+  }
 
   // Basic filters
   if (viewCount < MIN_VIEWS || likeCount < MIN_LIKES) {
@@ -127,12 +202,13 @@ function detectVideoLanguage(video, transcriptData) {
   const snippet = video.snippet || {};
   const fullText = `${snippet.title || ''} ${snippet.description || ''} ${snippet.channelTitle || ''}`.toLowerCase();
 
-  // Reject based on language keywords in text
+  // 1. Reject based on language keywords in text
   const rejectKeywords = ['telugu', 'tamil', 'malayalam', 'kannada', 'telugulo', 'తెలుగు'];
   if (rejectKeywords.some(keyword => fullText.includes(keyword))) {
     return null;
   }
 
+  // 2. Check transcript language if available
   if (transcriptData && transcriptData.language) {
     const lang = transcriptData.language;
     if (SUPPORTED_LANGUAGES.includes(lang)) {
@@ -142,9 +218,9 @@ function detectVideoLanguage(video, transcriptData) {
     }
   }
 
+  // 3. Check YouTube language codes
   const rawLang = (snippet.defaultAudioLanguage || snippet.defaultLanguage || '').toLowerCase();
   
-  // Explicitly check language codes
   if (rawLang.startsWith('hi') || rawLang === 'hi_IN') return 'hi';
   if (rawLang.startsWith('en') || rawLang === 'en_US' || rawLang === 'en_GB') return 'en';
   
@@ -153,18 +229,25 @@ function detectVideoLanguage(video, transcriptData) {
     return null;
   }
 
-  const text = `${snippet.title || ''} ${snippet.description || ''}`;
-  
-  // Script-based detection for rejection
-  if (TELUGU_REGEX.test(text) || MALAYALAM_REGEX.test(text)) {
+  // 4. Script-based detection for rejection
+  if (TELUGU_REGEX.test(fullText)) {
+    return null;
+  }
+  if (MALAYALAM_REGEX.test(fullText)) {
+    return null;
+  }
+  if (TAMIL_REGEX.test(fullText)) {
     return null;
   }
   
-  const hindiRegex = /[\u0900-\u097F]/;
-  if (hindiRegex.test(text)) return 'hi';
+  // 5. Check for Hindi script
+  if (HINDI_REGEX.test(fullText)) {
+    return 'hi';
+  }
 
+  // 6. Default to English
   return 'en';
-}}
+}
 
 /**
  * Evaluates transcript relevance using Gemini.
@@ -202,8 +285,8 @@ ${truncatedTranscript}`;
 /**
  * Calculates the new composite final score.
  */
-function calculateFinalScore(engagementRatio, recencyFactor, sentimentScore, transcriptRelevanceScore) {
-  const finalScore = (engagementRatio * 0.25) + (recencyFactor * 0.15) + (sentimentScore * 0.30) + (transcriptRelevanceScore * 0.30);
+function calculateFinalScore(engagementRatio, recencyFactor, sentimentScore, viewBoost) {
+  const finalScore = (engagementRatio * 0.30) + (recencyFactor * 0.10) + (sentimentScore * 0.30) + (viewBoost * 0.30);
   return parseFloat(finalScore.toFixed(4));
 }
 
@@ -353,7 +436,8 @@ exports.handler = async (event, context) => {
         console.warn(`Transcript analysis failed for ${video.id}:`, error.message);
       }
 
-      const finalScore = calculateFinalScore(engagementRatio, recencyFactor, sentimentScore, transcriptRelevanceScore);
+      const viewBoost = getViewBoost(viewCount, video.snippet.publishedAt);
+      const finalScore = calculateFinalScore(engagementRatio, recencyFactor, sentimentScore, viewBoost);
 
       results.push({
         videoId: video.id,
@@ -363,6 +447,7 @@ exports.handler = async (event, context) => {
         viewCount: viewCount,
         likeCount: likeCount,
         engagementRatio: engagementRatio,
+        viewBoost: viewBoost,
         finalScore: finalScore,
         transcriptRelevanceScore: transcriptRelevanceScore,
         language: videoLanguage,
