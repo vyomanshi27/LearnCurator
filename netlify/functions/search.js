@@ -126,7 +126,7 @@ function passesQualityFilter(video, publishedAt) {
     return false;
   }
 
-  // Exclude videos shorter than 5 minutes
+  // Exclude videos shorter than 15 minutes
   if (!meetsMinimumDuration(duration)) {
     return false;
   }
@@ -138,6 +138,29 @@ function passesQualityFilter(video, publishedAt) {
 
   // Age filter with exception for high engagement
   if (daysSincePublished > MAX_AGE_DAYS && engagementRatio < 0.05) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Fallback filter for additional videos when a strict result set is too small.
+ */
+function passesFallbackFilter(video) {
+  const viewCount = parseInt(video.statistics.viewCount) || 0;
+  const likeCount = parseInt(video.statistics.likeCount) || 0;
+  const duration = video.contentDetails?.duration;
+
+  if (isShort(duration)) {
+    return false;
+  }
+
+  if (!meetsMinimumDuration(duration)) {
+    return false;
+  }
+
+  if (viewCount < MIN_VIEWS || likeCount < MIN_LIKES) {
     return false;
   }
 
@@ -449,6 +472,45 @@ exports.handler = async (event, context) => {
 
     // Sort by finalScore descending
     results.sort((a, b) => b.finalScore - a.finalScore);
+
+    // If we still have fewer than requested, add fallback videos from the original stats results.
+    if (results.length < maxResults) {
+      const existingIds = new Set(results.map((item) => item.videoId));
+      const fallbackVideos = statsResponse.data.items.filter(
+        (video) => !existingIds.has(video.id) && passesFallbackFilter(video)
+      );
+
+      for (const video of fallbackVideos) {
+        if (results.length >= maxResults) break;
+
+        const viewCount = parseInt(video.statistics.viewCount) || 0;
+        const likeCount = parseInt(video.statistics.likeCount) || 0;
+        const engagementRatio = getEngagementRatio(likeCount, viewCount);
+        const recencyFactor = getRecencyFactor(video.snippet.publishedAt);
+        const sentimentScore = 0.5;
+        const viewBoost = getViewBoost(viewCount, video.snippet.publishedAt);
+        const finalScore = calculateFinalScore(engagementRatio, recencyFactor, sentimentScore, viewBoost);
+
+        results.push({
+          videoId: video.id,
+          title: video.snippet.title,
+          channelTitle: video.snippet.channelTitle,
+          thumbnail: video.snippet.thumbnails.medium.url,
+          viewCount: viewCount,
+          likeCount: likeCount,
+          engagementRatio: engagementRatio,
+          viewBoost: viewBoost,
+          finalScore: finalScore,
+          transcriptRelevanceScore: 0.5,
+          language: 'en',
+          url: `https://www.youtube.com/watch?v=${video.id}`,
+          publishedAt: video.snippet.publishedAt,
+        });
+      }
+
+      // Re-sort after adding fallback items
+      results.sort((a, b) => b.finalScore - a.finalScore);
+    }
 
     // Cache the results
     await cacheResults(query, results);
