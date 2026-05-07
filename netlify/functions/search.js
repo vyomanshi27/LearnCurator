@@ -21,8 +21,8 @@ const geminiApiKey = process.env.GEMINI_API_KEY;
 const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 // Environment variables with defaults
-const MIN_VIEWS = parseInt(process.env.MIN_VIEWS) || 100;
-const MIN_LIKES = parseInt(process.env.MIN_LIKES) || 5;
+const MIN_VIEWS = parseInt(process.env.MIN_VIEWS) || 10;
+const MIN_LIKES = parseInt(process.env.MIN_LIKES) || 0;
 const MAX_AGE_DAYS = parseInt(process.env.MAX_AGE_DAYS) || 730;
 const CACHE_DURATION_DAYS = parseInt(process.env.CACHE_DURATION_DAYS) || 7;
 
@@ -100,13 +100,13 @@ function isShort(duration) {
 }
 
 /**
- * Checks if video meets minimum duration requirement (5 minutes)
+ * Checks if video meets minimum duration requirement (2 minutes)
  * @param {string} duration - ISO 8601 duration string
- * @returns {boolean} True if duration >= 300 seconds (5 minutes)
+ * @returns {boolean} True if duration >= 120 seconds (2 minutes)
  */
 function meetsMinimumDuration(duration) {
   const totalSeconds = getDurationInSeconds(duration);
-  return totalSeconds >= 300;
+  return totalSeconds >= 120;
 }
 
 /**
@@ -223,8 +223,9 @@ function detectVideoLanguage(video, transcriptData) {
   
   if (rawLang.startsWith('hi') || rawLang === 'hi_IN') return 'hi';
   if (rawLang.startsWith('en') || rawLang === 'en_US' || rawLang === 'en_GB') return 'en';
+  if (rawLang.startsWith('pt') || rawLang.startsWith('es') || rawLang.startsWith('fr') || rawLang.startsWith('de')) return 'en'; // Accept popular tutorial languages
   
-  // Reject other Indian languages
+  // Reject only confirmed Indian languages
   if (rawLang.startsWith('te') || rawLang.startsWith('ml') || rawLang.startsWith('ta') || rawLang.startsWith('kn')) {
     return null;
   }
@@ -377,7 +378,7 @@ exports.handler = async (event, context) => {
         q: query,
         type: 'video',
         order: 'relevance',
-        maxResults: Math.min(maxResults * 4, 50), // Fetch many more for filtering
+        maxResults: 50, // Fetch maximum allowed for better filtering
         key: apiKey,
       },
     });
@@ -407,7 +408,7 @@ exports.handler = async (event, context) => {
 
     // 5. Process videos and keep only English/Hindi audio tutorials
     const results = [];
-    for (const video of filteredVideos.slice(0, Math.min(maxResults * 3, filteredVideos.length))) {
+    for (const video of filteredVideos) {
       const transcriptData = await fetchTranscript(video.id, apiKey);
       const videoLanguage = detectVideoLanguage(video, transcriptData);
 
