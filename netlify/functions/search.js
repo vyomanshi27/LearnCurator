@@ -100,13 +100,13 @@ function isShort(duration) {
 }
 
 /**
- * Checks if video meets minimum duration requirement (2 minutes)
+ * Checks if video meets minimum duration requirement (15 minutes)
  * @param {string} duration - ISO 8601 duration string
- * @returns {boolean} True if duration >= 120 seconds (2 minutes)
+ * @returns {boolean} True if duration >= 900 seconds (15 minutes)
  */
 function meetsMinimumDuration(duration) {
   const totalSeconds = getDurationInSeconds(duration);
-  return totalSeconds >= 120;
+  return totalSeconds >= 900;
 }
 
 /**
