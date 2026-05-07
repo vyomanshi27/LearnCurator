@@ -5,7 +5,7 @@
 
 // Configuration
 const CONFIG = {
-  API_BASE_URL: '/.netlify/functions/search', // Update to your backend URL in production
+  API_BASE_URL: '/.netlify/functions', // Update to your backend URL in production
   DEFAULT_MAX_RESULTS: 20,
 };
 
@@ -290,7 +290,9 @@ async function performSearch() {
       q: query,
       maxResults: CONFIG.DEFAULT_MAX_RESULTS,
     });
-    const apiUrl = `${apiBaseUrl}/api/search?${params}`;
+    const apiUrl = apiBaseUrl.endsWith('/search')
+      ? `${apiBaseUrl}?${params}`
+      : `${apiBaseUrl.replace(/\/+$/, '')}/search?${params}`;
 
     console.log('Searching with URL:', apiUrl);
 

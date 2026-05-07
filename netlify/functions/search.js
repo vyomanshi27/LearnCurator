@@ -415,26 +415,16 @@ exports.handler = async (event, context) => {
         continue;
       }
 
-      if (!transcriptData || !transcriptData.transcript) {
-        continue;
-      }
+    const viewCount = parseInt(video.statistics.viewCount) || 0;
+    const likeCount = parseInt(video.statistics.likeCount) || 0;
+    const engagementRatio = getEngagementRatio(likeCount, viewCount);
+    const recencyFactor = getRecencyFactor(video.snippet.publishedAt);
+    const sentimentScore = 0.5; // Placeholder for now
 
-      const viewCount = parseInt(video.statistics.viewCount) || 0;
-      const likeCount = parseInt(video.statistics.likeCount) || 0;
-      const engagementRatio = getEngagementRatio(likeCount, viewCount);
-      const recencyFactor = getRecencyFactor(video.snippet.publishedAt);
-      const sentimentScore = 0.5; // Placeholder for now
+    const transcript = transcriptData?.transcript || '';
 
-      // Evaluate transcript relevance
-      let transcriptRelevanceScore = 0.5;
-      const transcript = transcriptData.transcript;
-      try {
-        if (transcript) {
-          transcriptRelevanceScore = await evaluateTranscriptRelevance(query, transcript);
-        }
-      } catch (error) {
-        console.warn(`Transcript analysis failed for ${video.id}:`, error.message);
-      }
+    // Evaluate transcript relevance if transcript is available
+    let transcriptRelevanceScore = 0.5;
 
       const viewBoost = getViewBoost(viewCount, video.snippet.publishedAt);
       const finalScore = calculateFinalScore(engagementRatio, recencyFactor, sentimentScore, viewBoost);
