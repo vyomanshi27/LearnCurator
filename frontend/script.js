@@ -5,7 +5,7 @@
 
 // Configuration
 const CONFIG = {
-  API_BASE_URL: 'http://localhost:3001', // Update to your backend URL in production
+  API_BASE_URL: '/.netlify/functions/search', // Update to your backend URL in production
   DEFAULT_MAX_RESULTS: 20,
 };
 
