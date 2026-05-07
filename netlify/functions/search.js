@@ -21,7 +21,7 @@ const geminiApiKey = process.env.GEMINI_API_KEY;
 const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 // Environment variables with defaults
-const MIN_VIEWS = parseInt(process.env.MIN_VIEWS) || 10;
+const MIN_VIEWS = parseInt(process.env.MIN_VIEWS) || 1;
 const MIN_LIKES = parseInt(process.env.MIN_LIKES) || 0;
 const MAX_AGE_DAYS = parseInt(process.env.MAX_AGE_DAYS) || 730;
 const CACHE_DURATION_DAYS = parseInt(process.env.CACHE_DURATION_DAYS) || 7;
@@ -137,7 +137,7 @@ function passesQualityFilter(video, publishedAt) {
   }
 
   // Age filter with exception for high engagement
-  if (daysSincePublished > MAX_AGE_DAYS && engagementRatio < 0.05) {
+  if (daysSincePublished > MAX_AGE_DAYS && engagementRatio < 0.01) {
     return false;
   }
 
