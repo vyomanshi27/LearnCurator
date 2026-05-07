@@ -21,8 +21,8 @@ const geminiApiKey = process.env.GEMINI_API_KEY;
 const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 // Environment variables with defaults
-const MIN_VIEWS = parseInt(process.env.MIN_VIEWS) || 1000;
-const MIN_LIKES = parseInt(process.env.MIN_LIKES) || 50;
+const MIN_VIEWS = parseInt(process.env.MIN_VIEWS) || 100;
+const MIN_LIKES = parseInt(process.env.MIN_LIKES) || 5;
 const MAX_AGE_DAYS = parseInt(process.env.MAX_AGE_DAYS) || 730;
 const CACHE_DURATION_DAYS = parseInt(process.env.CACHE_DURATION_DAYS) || 7;
 
@@ -377,7 +377,7 @@ exports.handler = async (event, context) => {
         q: query,
         type: 'video',
         order: 'relevance',
-        maxResults: maxResults * 2, // Fetch more for filtering
+        maxResults: Math.min(maxResults * 4, 50), // Fetch many more for filtering
         key: apiKey,
       },
     });
@@ -407,7 +407,7 @@ exports.handler = async (event, context) => {
 
     // 5. Process videos and keep only English/Hindi audio tutorials
     const results = [];
-    for (const video of filteredVideos.slice(0, Math.min(20, filteredVideos.length))) {
+    for (const video of filteredVideos.slice(0, Math.min(maxResults * 3, filteredVideos.length))) {
       const transcriptData = await fetchTranscript(video.id, apiKey);
       const videoLanguage = detectVideoLanguage(video, transcriptData);
 
