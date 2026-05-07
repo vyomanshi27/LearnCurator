@@ -100,13 +100,13 @@ function isShort(duration) {
 }
 
 /**
- * Checks if video meets minimum duration requirement (15 minutes)
+ * Checks if video meets minimum duration requirement (5 minutes)
  * @param {string} duration - ISO 8601 duration string
- * @returns {boolean} True if duration >= 900 seconds (15 minutes)
+ * @returns {boolean} True if duration >= 300 seconds (5 minutes)
  */
 function meetsMinimumDuration(duration) {
   const totalSeconds = getDurationInSeconds(duration);
-  return totalSeconds >= 900;
+  return totalSeconds >= 300;
 }
 
 /**
@@ -435,7 +435,15 @@ exports.handler = async (event, context) => {
       const transcriptData = await fetchTranscript(video.id, apiKey);
       const videoLanguage = detectVideoLanguage(video, transcriptData);
 
-      if (!videoLanguage || !SUPPORTED_LANGUAGES.includes(videoLanguage)) {
+      // If we have transcript data, check language; otherwise assume English for tutorials
+      const hasTranscript = transcriptData && transcriptData.transcript;
+      const isValidLanguage = videoLanguage && SUPPORTED_LANGUAGES.includes(videoLanguage);
+
+      if (!hasTranscript && !isValidLanguage) {
+        // No transcript and no language info - assume English tutorial
+        // This allows videos without transcripts to be included
+      } else if (hasTranscript && !isValidLanguage) {
+        // Has transcript but wrong language - skip
         continue;
       }
 
@@ -464,7 +472,7 @@ exports.handler = async (event, context) => {
         viewBoost: viewBoost,
         finalScore: finalScore,
         transcriptRelevanceScore: transcriptRelevanceScore,
-        language: videoLanguage,
+        language: videoLanguage || 'en', // Default to English if no language detected
         url: `https://www.youtube.com/watch?v=${video.id}`,
         publishedAt: video.snippet.publishedAt,
       });
