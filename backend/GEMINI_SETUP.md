@@ -34,13 +34,7 @@ Add the API key to your `.env` file in the `backend/` directory:
 GEMINI_API_KEY=your-api-key-here
 ```
 
-**Example `.env` file:**
-```env
-YOUTUBE_API_KEY=AIzaSyAawgbF0yMb3lxZ-zi141KkbZZyAGf4zLI
-GEMINI_API_KEY=AIzaSyD2xM9pQ1r2sT3uVwXyZ4a5bC6dEfGhIjK
-PORT=5000
-NODE_ENV=development
-FRONTEND_URL=*
+
 ```
 
 ### Step 3: Restart Backend Server
