@@ -374,7 +374,7 @@ async function submitVideoFeedback(videoId, ratingValue, buttons, statusEl) {
     const comment = commentInput && commentInput.trim().length > 0 ? commentInput.trim() : null;
 
     const apiBaseUrl = getApiBaseUrl();
-    const response = await fetch(`${apiBaseUrl}/api/feedback`, {
+    const response = await fetch(`${apiBaseUrl}/feedback`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

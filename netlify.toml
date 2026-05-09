@@ -1,0 +1,7 @@
+[build]
+publish = "frontend"
+functions = "netlify/functions"
+command = "npm --prefix netlify/functions install"
+
+[dev]
+functions = "netlify/functions"
