@@ -3,15 +3,40 @@
 A web application that helps students find the best YouTube tutorials by sorting videos based on engagement (likes/views ratio) and recency, not just views.
 
 ## 🎯 Features
+1. **Core user features**
+ - Search YouTube tutorials by keyword
+ - Sort results by a custom score, not just views
+ - Show video metadata:
+   title
+   channel
+   views
+   likes
+ - engagement ratio
+ - relative publish date
+ - Direct "Watch on YouTube" links
+ - Error handling with user-friendly message
 
-- **Smart Search**: Search for tutorials on any topic
-- **Custom Engagement Score**: Videos sorted by a custom formula that considers:
-  - **Engagement Ratio** (70%): Likes divided by views, indicating quality
-  - **Recency Factor** (30%): How recently the video was published
-- **Clean UI**: Modern, responsive design that works on all devices
-- **Video Metrics**: Display views, likes, engagement ratio, and publication date
-- **Direct Links**: One-click access to YouTube videos
-- **Error Handling**: Graceful error messages and loading states
+2. **Ranking / algorithm features**
+ - Engagement-based ranking using likes/views ratio
+ - Recency-based scoring
+ - Final score calculation with:
+      engagement
+      recency
+      sentiment (when **Gemini AI** enabled)
+      view boost
+ - Filtering out:
+      YouTube Shorts
+      videos shorter than minimum duration
+      low-quality / low-engagement videos
+ - Language filtering for English/Hindi content
+ - Channel/language keyword blocking for non-target languages
+
+3. **Feedback & admin features**
+ - Per-video feedback widget with 3-step rating
+ - Admin login endpoint and session cookie
+ - Admin feedback dashboard (admin.html)
+ - Feedback stats endpoint for analytics
+ - Recent feedback listing
 
 ## 📋 Tech Stack
 
@@ -26,6 +51,7 @@ A web application that helps students find the best YouTube tutorials by sorting
 - Express.js
 - YouTube Data API v3
 - Deployed on: Netlify
+- Gemini API Key
 
 ## 🚀 Getting Started
 
@@ -119,26 +145,23 @@ const CONFIG = {
 
 ## 🎓 How the Scoring Works
 
-### Engagement Ratio
-- Calculated as: `likes / views`
-- Indicates **content quality**
-- Higher ratio means viewers liked the content
-- Weight in score: **70%**
+1. **Initial engagement score**
+The app first computes a base score for each video using:
+  -engagementRatio = likes / views (capped at 1.0)
+  -recencyFactor based on publish age
+   
+In youtubeService.js:
+  -score = engagementRatio * 0.7 + recencyFactor * 0.3
+  -So videos with high like/view ratio and recent publish date rank higher.
 
-### Recency Factor
-- Based on how many days ago the video was published:
-  - **1.0** (100%) - Published in last 30 days (fresh content)
-  - **0.5** (50%) - Published 30-90 days ago
-  - **0.2** (20%) - Published more than 90 days ago
-- Ensures you get **recent, relevant tutorials**
-- Weight in score: **30%**
+2. **Sentiment and final score**
+After getting the top candidate videos, it enriches them with sentiment analysis and a popularity boost.
 
-### Final Score
-```
-score = (engagementRatio × 0.7) + (recencyFactor × 0.3)
-```
-
-Videos are sorted by score in **descending order**.
+ -  Final score formula:
+    finalScore = engagementRatio * 0.3
+    + recencyFactor * 0.1
+    + sentimentScore * 0.3
+    + viewBoost * 0.3
 
 ## 📚 API Documentation
 
