@@ -38,6 +38,27 @@ A web application that helps students find the best YouTube tutorials by sorting
  - Feedback stats endpoint for analytics
  - Recent feedback listing
 
+
+## 🎓 How the Scoring Works
+
+1. **Initial engagement score**
+  The app first computes a base score for each video using:
+  -engagementRatio = likes / views (capped at 1.0)
+  -recencyFactor based on publish age
+   
+  In youtubeService.js:
+  -score = engagementRatio * 0.7 + recencyFactor * 0.3
+  -So videos with high like/view ratio and recent publish date rank higher.
+
+2. **Sentiment and final score**
+    After getting the top candidate videos, it enriches them with sentiment analysis and a popularity boost.
+
+ -  Final score formula:
+    finalScore = engagementRatio * 0.3
+    + recencyFactor * 0.1
+    + sentimentScore * 0.3
+    + viewBoost * 0.3
+
 ## 📋 Tech Stack
 
 ### Frontend
@@ -142,26 +163,6 @@ const CONFIG = {
   DEFAULT_MAX_RESULTS: 20,
 };
 ```
-
-## 🎓 How the Scoring Works
-
-1. **Initial engagement score**
-The app first computes a base score for each video using:
-  -engagementRatio = likes / views (capped at 1.0)
-  -recencyFactor based on publish age
-   
-In youtubeService.js:
-  -score = engagementRatio * 0.7 + recencyFactor * 0.3
-  -So videos with high like/view ratio and recent publish date rank higher.
-
-2. **Sentiment and final score**
-After getting the top candidate videos, it enriches them with sentiment analysis and a popularity boost.
-
- -  Final score formula:
-    finalScore = engagementRatio * 0.3
-    + recencyFactor * 0.1
-    + sentimentScore * 0.3
-    + viewBoost * 0.3
 
 ## 📚 API Documentation
 
