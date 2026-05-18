@@ -3,61 +3,61 @@
 A web application that helps students find the best YouTube tutorials by sorting videos based on engagement (likes/views ratio) and recency, not just views.
 
 ## 🎯 Features
-1. **Core user features**
- - Search YouTube tutorials by keyword
- - Sort results by a custom score, not just views
- - Show video metadata:
-   title
-   channel
-   views
-   likes
- - engagement ratio
- - relative publish date
- - Direct "Watch on YouTube" links
- - Error handling with user-friendly message
+  1. **Core user features**
+   - Search YouTube tutorials by keyword
+   - Sort results by a custom score, not just views
+   - Show video metadata:
+     title
+     channel
+     views
+     likes
+   - engagement ratio
+   - relative publish date
+   - Direct "Watch on YouTube" links
+   - Error handling with user-friendly message
 
-2. **Ranking / algorithm features**
- - Engagement-based ranking using likes/views ratio
- - Recency-based scoring
- - Final score calculation with:
-      engagement
-      recency
-      sentiment (when **Gemini AI** enabled)
-      view boost
- - Filtering out:
-      YouTube Shorts
-      videos shorter than minimum duration
-      low-quality / low-engagement videos
- - Language filtering for English/Hindi content
- - Channel/language keyword blocking for non-target languages
+  2. **Ranking / algorithm features**
+   - Engagement-based ranking using likes/views ratio
+   - Recency-based scoring
+   - Final score calculation with:
+        engagement
+        recency
+        sentiment (when **Gemini AI** enabled)
+        view boost
+   - Filtering out:
+        YouTube Shorts
+        videos shorter than minimum duration
+        low-quality / low-engagement videos
+   - Language filtering for English/Hindi content
+   - Channel/language keyword blocking for non-target languages
 
-3. **Feedback & admin features**
- - Per-video feedback widget with 3-step rating
- - Admin login endpoint and session cookie
- - Admin feedback dashboard (admin.html)
- - Feedback stats endpoint for analytics
- - Recent feedback listing
+  3. **Feedback & admin features**
+   - Per-video feedback widget with 3-step rating
+   - Admin login endpoint and session cookie
+   - Admin feedback dashboard (admin.html)
+   - Feedback stats endpoint for analytics
+   - Recent feedback listing
 
 
 ## 🎓 How the Scoring Works
 
 1. **Initial engagement score**
-  The app first computes a base score for each video using:
-  -engagementRatio = likes / views (capped at 1.0)
-  -recencyFactor based on publish age
+    The app first computes a base score for each video using:
+     -engagementRatio = likes / views (capped at 1.0)
+     -recencyFactor based on publish age
    
-  In youtubeService.js:
-  -score = engagementRatio * 0.7 + recencyFactor * 0.3
-  -So videos with high like/view ratio and recent publish date rank higher.
+    In youtubeService.js:
+     -score = engagementRatio * 0.7 + recencyFactor * 0.3
+     -So videos with high like/view ratio and recent publish date rank higher.
 
 2. **Sentiment and final score**
-    After getting the top candidate videos, it enriches them with sentiment analysis and a popularity boost.
+     After getting the top candidate videos, it enriches them with sentiment analysis and a popularity boost.
 
- -  Final score formula:
-    finalScore = engagementRatio * 0.3
-    + recencyFactor * 0.1
-    + sentimentScore * 0.3
-    + viewBoost * 0.3
+    -  Final score formula:
+       finalScore = engagementRatio * 0.3
+       + recencyFactor * 0.1
+       + sentimentScore * 0.3
+       + viewBoost * 0.3
 
 ## 📋 Tech Stack
 
