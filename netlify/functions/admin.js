@@ -172,9 +172,11 @@ exports.handler = async function (event) {
 
       if (feedbackError) {
         console.error('Supabase error:', feedbackError);
+        const feedbackErrorMessage = feedbackError.message || feedbackError.details || feedbackError.code || JSON.stringify(feedbackError);
         return buildResponse(500, { 
           success: false, 
-          error: 'Failed to fetch feedback' 
+          error: 'Failed to fetch feedback: ' + (feedbackErrorMessage || 'Unknown Supabase error'),
+          details: feedbackError
         }, requestOrigin);
       }
 
