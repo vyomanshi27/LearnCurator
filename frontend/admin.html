@@ -275,6 +275,13 @@
             }
 
             const hostname = window.location.hostname;
+            
+            // In production (Netlify), use Netlify functions
+            if (!['localhost', '127.0.0.1', '::1'].includes(hostname)) {
+                return '/.netlify/functions';
+            }
+
+            // In local development, use Express backend on port 3001
             if (hostname === 'localhost' || hostname === '127.0.0.1') {
                 return `http://${hostname}:3001`;
             }
@@ -307,6 +314,7 @@
 
             const password = adminPasswordInput.value.trim();
             console.log('Password entered, length:', password.length);
+            console.log('Current location:', window.location.href);
 
             if (!password) {
                 showLoginError('Please enter your admin password.');
@@ -317,16 +325,20 @@
             loginBtn.textContent = '🔐 Logging in...';
 
             try {
-                const apiUrl = `${getApiBaseUrl()}/api/admin/login`;
+                const baseUrl = getApiBaseUrl();
+                const apiUrl = baseUrl.includes('.netlify')
+                    ? '/.netlify/functions/admin/login'
+                    : `${baseUrl}/api/admin/login`;
                 console.log('Making request to:', apiUrl);
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
-                    credentials: 'include',
+                    credentials: 'same-origin',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ password })
+                    body: JSON.stringify({ password }),
+                    mode: 'same-origin'
                 });
 
                 console.log('Response status:', response.status);
@@ -355,9 +367,15 @@
             logoutBtn.textContent = '🚪 Logging out...';
 
             try {
-                await fetch(`${getApiBaseUrl()}/api/admin/logout`, {
+                const baseUrl = getApiBaseUrl();
+                const apiUrl = baseUrl.includes('.netlify')
+                    ? '/.netlify/functions/admin/logout'
+                    : `${baseUrl}/api/admin/logout`;
+
+                await fetch(apiUrl, {
                     method: 'POST',
-                    credentials: 'include'
+                    credentials: 'same-origin',
+                    mode: 'same-origin'
                 });
             } catch (error) {
                 console.warn('Logout error', error);
@@ -388,8 +406,14 @@
             refreshBtn.textContent = '⏳ Loading...';
 
             try {
-                const response = await fetch(`${getApiBaseUrl()}/api/admin/feedback-stats`, {
-                    credentials: 'include'
+                const baseUrl = getApiBaseUrl();
+                const apiUrl = baseUrl.includes('.netlify')
+                    ? '/.netlify/functions/admin/feedback-stats'
+                    : `${baseUrl}/api/admin/feedback-stats`;
+
+                const response = await fetch(apiUrl, {
+                    credentials: 'same-origin',
+                    mode: 'same-origin'
                 });
 
                 if (!response.ok) {
