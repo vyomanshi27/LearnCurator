@@ -3,11 +3,10 @@ const { createClient } = require('@supabase/supabase-js');
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Supabase configuration is missing. Set SUPABASE_URL and SUPABASE_ANON_KEY in environment variables.');
+let supabase;
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 const createCorsHeaders = (origin) => ({
   'Access-Control-Allow-Origin': origin || '*',
@@ -27,6 +26,16 @@ const buildResponse = (statusCode, body, origin) => ({
 
 exports.handler = async function (event) {
   const requestOrigin = event.headers.origin || event.headers.Origin || '*';
+
+  // Check for required environment variables
+  if (!supabaseUrl) {
+    console.error('Missing SUPABASE_URL environment variable');
+    return buildResponse(500, { success: false, error: 'Server configuration error: Missing SUPABASE_URL' }, requestOrigin);
+  }
+  if (!supabaseKey) {
+    console.error('Missing SUPABASE_ANON_KEY environment variable');
+    return buildResponse(500, { success: false, error: 'Server configuration error: Missing SUPABASE_ANON_KEY' }, requestOrigin);
+  }
 
   if (event.httpMethod === 'OPTIONS') {
     return {

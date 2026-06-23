@@ -376,10 +376,10 @@ exports.handler = async (event, context) => {
 
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
-    console.error('Missing YouTube API Key');
+    console.error('Missing YOUTUBE_API_KEY environment variable');
     return {
       statusCode: 500,
-      body: JSON.stringify({ success: false, error: 'Server configuration error' }),
+      body: JSON.stringify({ success: false, error: 'Server configuration error: Missing YOUTUBE_API_KEY' }),
     };
   }
 
@@ -531,10 +531,14 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ success: true, query, results: finalResults, count: finalResults.length }),
     };
   } catch (error) {
-    console.error('YouTube API error:', error.message);
+    const responseError = error.response?.data?.error?.message || error.response?.data?.error_description || error.message;
+    console.error('YouTube API error:', responseError);
+    const message = responseError.toLowerCase().includes('key')
+      ? 'Server configuration error: Invalid or missing YOUTUBE_API_KEY'
+      : 'Failed to search YouTube';
     return {
       statusCode: 500,
-      body: JSON.stringify({ success: false, error: 'Failed to search YouTube' }),
+      body: JSON.stringify({ success: false, error: message }),
     };
   }
 };
